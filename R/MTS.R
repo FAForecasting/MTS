@@ -2035,7 +2035,7 @@ LLKvmas <- function(par,zt=da, include.mean=include.mean, MAlag=MAlag, fixed=fix
 }
 
 ####
-"VARMA" <- function(da,p=0,q=0,include.mean=T,fixed=NULL,beta=NULL,sebeta=NULL,prelim=F,details=F,thres=2.0){
+"VARMA" <- function(da,p=0,q=0,include.mean=T,fixed=NULL,beta=NULL,sebeta=NULL,prelim=F,details=F,thres=2.0, printOutput=FALSE){
    # Estimation of a vector ARMA model using conditional MLE (Gaussian dist)
    #
    # When prelim=TRUE, fixed is assigned based on the results of AR approximation.
@@ -2153,17 +2153,22 @@ LLKvmas <- function(par,zt=da, include.mean=include.mean, MAlag=MAlag, fixed=fix
          }
        }
    }
-   #########
-   cat("Number of parameters: ",length(par),"\n")
-   cat("initial estimates: ",round(par,4),"\n")
+   if(printOutput){
+      cat("Number of parameters: ",length(par),"\n")
+      cat("initial estimates: ",round(par,4),"\n")
+   }
+   
    ### Set up lower and upper bounds
    lowerBounds=par; upperBounds=par
    for (j in 1:length(par)){
       lowerBounds[j] = par[j]-2*separ[j]
       upperBounds[j] = par[j]+2*separ[j]
    }
-   cat("Par. lower-bounds: ",round(lowerBounds,4),"\n")
-   cat("Par. upper-bounds: ",round(upperBounds,4),"\n")
+   if(printOutput){
+      cat("Par. lower-bounds: ",round(lowerBounds,4),"\n")
+      cat("Par. upper-bounds: ",round(upperBounds,4),"\n")
+   }
+   
 #### likelihood function
 LLKvarma <- function(par,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed){
    ##
@@ -2310,15 +2315,18 @@ LLKvarma <- function(par,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed){
       }
    }
    est=fit$par
-   cat("Final   Estimates: ",est,"\n")
+   if(printOutput) cat("Final   Estimates: ",est,"\n")
    # Step 6: Create and Print Summary Report:
    se.coef = sqrt(diag(solve(Hessian)))
    tval = fit$par/se.coef
    matcoef = cbind(fit$par, se.coef, tval, 2*(1-pnorm(abs(tval))))
    dimnames(matcoef) = list(names(tval), c(" Estimate",
    " Std. Error", " t value", "Pr(>|t|)"))
-   cat("\nCoefficient(s):\n")
-   printCoefmat(matcoef, digits = 4, signif.stars = TRUE)
+   if(printOutput){
+      cat("\nCoefficient(s):\n")
+      printCoefmat(matcoef, digits = 4, signif.stars = TRUE)
+   }
+   
    #
    ### restore estimates to the format of unconstrained case for printing purpose.
    #### icnt: parameter count
@@ -2381,17 +2389,19 @@ LLKvarma <- function(par,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed){
       sebeta=rbind(sebeta,seTH)
    }
    #########
-   cat("---","\n")
-   cat("Estimates in matrix form:","\n")
-   if(include.mean){
+   if(printOutput){
+      cat("---","\n")
+      cat("Estimates in matrix form:","\n")
+   }
+   if(include.mean && printOutput){
       cat("Constant term: ","\n")
       cat("Estimates: ",Ph0,"\n")
    }
    if(p > 0){
-      cat("AR coefficient matrix","\n")
+      if(printOutput) cat("AR coefficient matrix","\n")
       jcnt=0
       for (i in 1:p){
-         cat("AR(",i,")-matrix","\n")
+         if(printOutput) cat("AR(",i,")-matrix","\n")
          ph=t(PH[(jcnt+1):(jcnt+k),])
          print(ph,digits=3)
          jcnt=jcnt+k
@@ -2399,10 +2409,10 @@ LLKvarma <- function(par,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed){
       # end of if (p > 0)
    }
    if(q > 0){
-      cat("MA coefficient matrix","\n")
+      if(printOutput) cat("MA coefficient matrix","\n")
       icnt=0
       for (i in 1:q){
-         cat("MA(",i,")-matrix","\n")
+         if(printOutput) cat("MA(",i,")-matrix","\n")
          theta=-t(TH[(icnt+1):(icnt+k),])
          print(theta,digits=3)
          icnt=icnt+k
@@ -2474,16 +2484,21 @@ LLKvarma <- function(par,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed){
    at=at[(ist:nT),]
    sig=t(at)%*%at/(nT-pqmax)
    ##
-   cat(" ","\n")
-   cat("Residuals cov-matrix:","\n")
-   print(sig)
+   if(printOutput){
+      cat(" ","\n")
+      cat("Residuals cov-matrix:","\n")
+      print(sig)
+   }
    dd=det(sig)
    d1=log(dd)
    aic=d1+2*npar/nT
    bic=d1+log(nT)*npar/nT
-   cat("----","\n")
-   cat("aic= ",aic,"\n")
-   cat("bic= ",bic,"\n")
+   if(printOutput){
+      cat("----","\n")
+      cat("aic= ",aic,"\n")
+      cat("bic= ",bic,"\n")
+   }
+   
    if(length(PH) > 0)PH=t(PH)
    if(length(TH) > 0)TH=-t(TH)
    
@@ -2529,7 +2544,7 @@ LLKvarma <- function(par,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed){
    refVARMA <- list(data=x,coef=mm$coef,secoef=mm$secoef,ARorder=p1,MAorder=q1,cnst=cnst,residuals=mm$residuals,Ph0=mm$Ph0,Phi=mm$Phi,Theta=mm$Theta,Sigma=mm$Sigma,aic=mm$aic,bic=mm$bic)
 }
 ######
-"VARMApred" <- function(model,h=1,orig=0){
+"VARMApred" <- function(model,h=1,orig=0, printOutput=FALSE){
    ## Compute forecasts and forecast error covariance of a VARMA mdoel.
    ## created April 21, 2011 by Ruey S. Tsay
    #
@@ -2634,18 +2649,21 @@ LLKvarma <- function(par,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed){
       }
       sefcst=rbind(sefcst,sqrt(diag(Sig)))
    }
-   cat("Predictions at origin ",orig,"\n")
-   print(px[(orig+1):(orig+h),],digits=4)
-   cat("Standard errors of predictions","\n")
-   if(h == 1){
-      print(sefcst,digits=4)
+   if(printOutput){
+      cat("Predictions at origin ",orig,"\n")
+      print(px[(orig+1):(orig+h),],digits=4)
+      cat("Standard errors of predictions","\n")
+      if(h == 1){
+         print(sefcst,digits=4)
+      }
+      else {
+         print(sefcst[1:h,],digits=4)
+      }
    }
-   else {
-      print(sefcst[1:h,],digits=4)
-   }
+   
+   
    #### if orig < nT, print out actual values.
    if(orig < nT){
-      cat("Observations, predictions, and errors: ","\n")
       tmp=NULL
       jend=min(nT,orig+h)
       for (t in (orig+1):jend){
@@ -2658,7 +2676,10 @@ LLKvarma <- function(par,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed){
          idx=c(idx,c(0,1,2)*k+j+1)
       }
       tmp = tmp[,idx]
-      print(tmp,digits=4)
+      if(printOutput){
+         cat("Observations, predictions, and errors: ","\n")
+         print(tmp,digits=4)
+      }
    }
    
    VARMApred <- list(pred=px[(orig+1):(orig+h),],se.err=sefcst,orig=orig)
@@ -4561,7 +4582,7 @@ for (it in orig:(nT-1)){
    VARMAcov <- list(autocov=covmtx,ccm=cormtx)
 }
 
-"Eccm" <- function(zt,maxp=5,maxq=6,include.mean=FALSE,rev=TRUE){
+"Eccm" <- function(zt,maxp=5,maxq=6,include.mean=FALSE,rev=TRUE, printOutput=FALSE){
    ### Compute extended cross-correlation matrices using iterated regression
    ### fitting instead of the recursive method.
    #### rev: a switch to compute Q(m) statistics from q to maxq.
@@ -4677,13 +4698,17 @@ for (it in orig:(nT-1)){
          pEccm=rbind(pEccm,pv1)
        }
     }
-   cat("p-values table of Extended Cross-correlation Matrices:","\n")
-   cat("Column: MA order","\n")
-   cat("Row   : AR order","\n")
+   
    colnames(pEccm) <- c(c(0:maxq))
    rownames(pEccm) <- c(c(0:maxp))
    tmp=round(pEccm,4)
-   printCoefmat(tmp)
+   if(printOutput){
+      cat("p-values table of Extended Cross-correlation Matrices:","\n")
+      cat("Column: MA order","\n")
+      cat("Row   : AR order","\n")
+      printCoefmat(tmp)
+   }
+
     Eccm <- list(pEccm=pEccm,vEccm=vEccm,ARcoef=ARcoef)
   }
 

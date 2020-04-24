@@ -2340,8 +2340,7 @@ LLKvarma <- function(par,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed){
    se.coef = sqrt(diag(solve(Hessian)))
    tval = fit$par/se.coef
    matcoef = cbind(fit$par, se.coef, tval, 2*(1-pnorm(abs(tval))))
-   dimnames(matcoef) = list(names(tval), c(" Estimate",
-   " Std. Error", " t value", "Pr(>|t|)"))
+   dimnames(matcoef) = list(names(tval), c(" Estimate", " Std. Error", " t value", "Pr(>|t|)"))
    if(printOutput){
       cat("\nCoefficient(s):\n")
       printCoefmat(matcoef, digits = 4, signif.stars = TRUE)
@@ -2421,9 +2420,11 @@ LLKvarma <- function(par,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed){
       if(printOutput) cat("AR coefficient matrix","\n")
       jcnt=0
       for (i in 1:p){
-         if(printOutput) cat("AR(",i,")-matrix","\n")
          ph=t(PH[(jcnt+1):(jcnt+k),])
-         print(ph,digits=3)
+         if(printOutput) {
+            cat("AR(",i,")-matrix","\n")
+            print(ph,digits=3)
+         }
          jcnt=jcnt+k
       }
       # end of if (p > 0)

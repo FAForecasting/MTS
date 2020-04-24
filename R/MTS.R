@@ -2432,9 +2432,11 @@ LLKvarma <- function(par,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed){
       if(printOutput) cat("MA coefficient matrix","\n")
       icnt=0
       for (i in 1:q){
-         if(printOutput) cat("MA(",i,")-matrix","\n")
          theta=-t(TH[(icnt+1):(icnt+k),])
-         print(theta,digits=3)
+         if(printOutput){
+            cat("MA(",i,")-matrix","\n")
+            print(theta,digits=3)
+         } 
          icnt=icnt+k
       }
       # end of the statement if(q > 0)

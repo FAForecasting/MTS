@@ -2035,7 +2035,7 @@ LLKvmas <- function(par,zt=da, include.mean=include.mean, MAlag=MAlag, fixed=fix
 }
 
 ####
-"VARMA" <- function(da,p=0,q=0,include.mean=T,fixed=NULL,beta=NULL,sebeta=NULL,prelim=F,details=F,thres=2.0, parallell=FALSE, printOutput=FALSE){
+"VARMA" <- function(da,p=0,q=0,include.mean=T,fixed=NULL,beta=NULL,sebeta=NULL,prelim=F,details=F,thres=2.0, parallel=FALSE, printOutput=FALSE){
    # Estimation of a vector ARMA model using conditional MLE (Gaussian dist)
    #
    # When prelim=TRUE, fixed is assigned based on the results of AR approximation.
@@ -2093,8 +2093,8 @@ LLKvmas <- function(par,zt=da, include.mean=include.mean, MAlag=MAlag, fixed=fix
    }   
    iniEST <- list(estimates=beta,se=sebeta)
   }
-   if(parallell && Sys.info()[1] == "Windows"){
-      stop("MTS - Parallell computing is not supported in windows")
+   if(parallel && Sys.info()[1] == "Windows"){
+      stop("MTS - parallel computing is not supported in windows")
    }
   if(length(fixed) < 1){ 
    m1=VARorder(da,p+q+9,output=FALSE)
@@ -2323,7 +2323,7 @@ LLKvarma <- function(par,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed){
       return(HessianResult)
    }
 
-   if(parallell){
+   if(parallel){
       cores=detectCores()
       all_runs <- seq(1, npar)
       doWork <- function(i){HessianFunc(fit$par, epsilon, da, p, q, include.mean, fixed, i, npar)}

@@ -2035,7 +2035,7 @@ LLKvmas <- function(par,zt=da, include.mean=include.mean, MAlag=MAlag, fixed=fix
 }
 
 ####
-"VARMA" <- function(da,p=0,q=0,include.mean=T,fixed=NULL,beta=NULL,sebeta=NULL,prelim=F,details=F,thres=2.0, printOutput=FALSE){
+"VARMA" <- function(da,p=0,q=0,include.mean=T,fixed=NULL,beta=NULL,sebeta=NULL,prelim=F,details=F,thres=2.0, parallell=FALSE, printOutput=FALSE){
    # Estimation of a vector ARMA model using conditional MLE (Gaussian dist)
    #
    # When prelim=TRUE, fixed is assigned based on the results of AR approximation.
@@ -2093,7 +2093,9 @@ LLKvmas <- function(par,zt=da, include.mean=include.mean, MAlag=MAlag, fixed=fix
    }   
    iniEST <- list(estimates=beta,se=sebeta)
   }
-
+   if(parallell && Sys.info()[1] == "Windows"){
+      stop("MTS - Parallell computing is not supported in windows")
+   }
   if(length(fixed) < 1){ 
    m1=VARorder(da,p+q+9,output=FALSE)
    porder=m1$aicor
@@ -2300,18 +2302,36 @@ LLKvarma <- function(par,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed){
    epsilon = 0.0001 * fit$par
    npar=length(par)
    Hessian = matrix(0, ncol = npar, nrow = npar)
-   for (i in 1:npar) {
+   HessianFunc <- function(fitPar, epsilon, da, p, q, include.mean, fixed, i, npar){
+      HessianResult <- vector(length = npar)
       for (j in 1:npar) {
-         x1 = x2 = x3 = x4  = fit$par
-         x1[i] = x1[i] + epsilon[i]; x1[j] = x1[j] + epsilon[j]
-         x2[i] = x2[i] + epsilon[i]; x2[j] = x2[j] - epsilon[j]
-         x3[i] = x3[i] - epsilon[i]; x3[j] = x3[j] + epsilon[j]
-         x4[i] = x4[i] - epsilon[i]; x4[j] = x4[j] - epsilon[j]
-         Hessian[i, j] = (LLKvarma(x1,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed)
-                         -LLKvarma(x2,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed)
-                         -LLKvarma(x3,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed)
-                         +LLKvarma(x4,zt=da,p=p,q=q,include.mean=include.mean,fixed=fixed))/
-         (4*epsilon[i]*epsilon[j])
+         x1 = x2 = x3 = x4 = fit$par
+         x1[i] = x1[i] + epsilon[i]
+         x1[j] = x1[j] + epsilon[j]
+         x2[i] = x2[i] + epsilon[i]
+         x2[j] = x2[j] - epsilon[j]
+         x3[i] = x3[i] - epsilon[i]
+         x3[j] = x3[j] + epsilon[j]
+         x4[i] = x4[i] - epsilon[i]
+         x4[j] = x4[j] - epsilon[j]
+         HessianResult[j] = (LLKvarma(x1, zt = da, p = p, q = q, include.mean = include.mean, fixed = fixed) -
+                              LLKvarma(x2, zt = da, p = p, q = q, include.mean = include.mean, fixed = fixed) -
+                              LLKvarma(x3, zt = da, p = p, q = q, include.mean = include.mean, fixed = fixed) +
+                              LLKvarma(x4, zt = da, p = p, q = q, include.mean = include.mean, fixed = fixed)) / 
+                           (4 * epsilon[i] * epsilon[j])
+         }
+      return(HessianResult)
+   }
+
+   if(parallell){
+      cores=detectCores()
+      all_runs <- seq(1, npar)
+      doWork <- function(i){HessianFunc(fit$par, epsilon, da, p, q, include.mean, fixed, i, npar)}
+      run_result <- mclapply(all_runs, doWork, mc.cores = cores)
+      Hessian <- matrix(unlist(run_result), ncol = npar, nrow=npar)
+   }else{
+      for (i in 1:npar) {
+         Hessian[i,] = HessianFunc(fit$par, epsilon, da, p, q, include.mean, fixed, i, npar)
       }
    }
    est=fit$par
